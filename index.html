@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StudyPass Kiosk - 무인 스터디카페 키오스크</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- 데모용 화면 전환 탭 (실제 매장에서는 키오스크와 관리자 화면이 따로 있습니다) -->
+  <nav class="view-tabs">
+    <button class="view-tab active" data-view="kiosk">🖥 키오스크 화면</button>
+    <button class="view-tab" data-view="admin">📊 관리자 화면</button>
+  </nav>
+
+  <!-- ===================== 키오스크 ===================== -->
+  <div class="view" id="view-kiosk">
+    <div class="kiosk">
+      <!-- 키오스크 위쪽 상태 표시줄 -->
+      <header class="kiosk-bar">
+        <span class="brand">StudyPass</span>
+        <span id="clock"></span>
+      </header>
+
+      <!-- 1. 처음 화면 -->
+      <section class="screen active" id="screen-home">
+        <div class="home-title">
+          <p class="welcome">무인 스터디카페</p>
+          <h1>StudyPass</h1>
+          <p class="seat-left">남은 좌석 <strong id="home-seat-left"></strong> / <span id="home-seat-total"></span>석</p>
+        </div>
+        <div class="home-buttons">
+          <button class="big-btn primary" id="btn-start-enter">
+            <span class="big-icon">🪑</span>
+            입실하기
+            <small>이용권 구매 · 좌석 선택</small>
+          </button>
+          <button class="big-btn" id="btn-start-exit">
+            <span class="big-icon">🚪</span>
+            퇴실하기
+            <small>휴대폰 번호로 퇴실</small>
+          </button>
+        </div>
+        <p class="home-help">도움이 필요하면 매장 안내문의 관리자 연락처로 문의해 주세요.</p>
+      </section>
+
+      <!-- 2. 휴대폰 번호 입력 (입실·퇴실 같이 사용) -->
+      <section class="screen" id="screen-phone">
+        <h2 class="step-title" id="phone-title">휴대폰 번호를 입력해 주세요</h2>
+        <p class="step-desc">입실, 퇴실 확인에 사용됩니다.</p>
+        <div class="phone-display" id="phone-display">010-____-____</div>
+        <p class="error-msg" id="phone-error"></p>
+        <div class="keypad" id="keypad">
+          <button data-key="1">1</button><button data-key="2">2</button><button data-key="3">3</button>
+          <button data-key="4">4</button><button data-key="5">5</button><button data-key="6">6</button>
+          <button data-key="7">7</button><button data-key="8">8</button><button data-key="9">9</button>
+          <button data-key="clear" class="key-sub">전체 삭제</button><button data-key="0">0</button><button data-key="back" class="key-sub">⌫</button>
+        </div>
+        <div class="step-buttons">
+          <button class="btn ghost" data-go="home">처음으로</button>
+          <button class="btn primary" id="btn-phone-next" disabled>다음</button>
+        </div>
+      </section>
+
+      <!-- 3. 이용권 선택 -->
+      <section class="screen" id="screen-ticket">
+        <h2 class="step-title">이용권을 선택해 주세요</h2>
+        <p class="step-desc">선택한 시간 동안 좌석을 이용할 수 있습니다.</p>
+        <div class="ticket-list" id="ticket-list"></div>
+        <div class="step-buttons">
+          <button class="btn ghost" data-go="phone">이전</button>
+          <button class="btn primary" id="btn-ticket-next" disabled>다음</button>
+        </div>
+      </section>
+
+      <!-- 4. 좌석 선택 -->
+      <section class="screen" id="screen-seat">
+        <h2 class="step-title">좌석을 선택해 주세요</h2>
+        <div class="legend">
+          <span><i class="dot free"></i>선택 가능</span>
+          <span><i class="dot used"></i>사용 중</span>
+          <span><i class="dot picked"></i>선택한 좌석</span>
+        </div>
+        <div id="seat-map"></div>
+        <div class="step-buttons">
+          <button class="btn ghost" data-go="ticket">이전</button>
+          <button class="btn primary" id="btn-seat-next" disabled>다음</button>
+        </div>
+      </section>
+
+      <!-- 5. 결제 -->
+      <section class="screen" id="screen-pay">
+        <h2 class="step-title">결제 정보를 확인해 주세요</h2>
+        <dl class="summary" id="pay-summary"></dl>
+        <p class="step-desc">결제 수단을 선택하면 결제가 진행됩니다. (데모: 실제 결제는 되지 않습니다)</p>
+        <div class="pay-methods">
+          <button class="pay-btn" data-method="신용카드">💳 신용카드</button>
+          <button class="pay-btn" data-method="간편결제">📱 간편결제</button>
+        </div>
+        <div class="step-buttons">
+          <button class="btn ghost" data-go="seat">이전</button>
+        </div>
+      </section>
+
+      <!-- 6. 결제 진행 중 -->
+      <section class="screen" id="screen-paying">
+        <div class="center-box">
+          <div class="spinner"></div>
+          <h2 class="step-title">결제 중입니다</h2>
+          <p class="step-desc" id="paying-method"></p>
+        </div>
+      </section>
+
+      <!-- 7. 입실 완료 -->
+      <section class="screen" id="screen-done">
+        <div class="center-box">
+          <div class="done-icon">✓</div>
+          <h2 class="step-title">입실이 완료되었습니다</h2>
+          <dl class="summary" id="done-summary"></dl>
+          <div class="pin-box">
+            <p>출입 인증번호</p>
+            <strong id="done-pin"></strong>
+            <small>출입문 인증기에 이 번호를 입력해 주세요.</small>
+          </div>
+          <p class="countdown"><span id="done-count">10</span>초 후 처음 화면으로 돌아갑니다.</p>
+          <button class="btn primary" data-go="home">처음으로</button>
+        </div>
+      </section>
+
+      <!-- 8. 퇴실 확인 -->
+      <section class="screen" id="screen-exit">
+        <h2 class="step-title">퇴실하시겠어요?</h2>
+        <dl class="summary" id="exit-summary"></dl>
+        <div class="step-buttons">
+          <button class="btn ghost" data-go="home">취소</button>
+          <button class="btn danger" id="btn-exit-confirm">퇴실하기</button>
+        </div>
+      </section>
+
+      <!-- 9. 퇴실 완료 -->
+      <section class="screen" id="screen-exit-done">
+        <div class="center-box">
+          <div class="done-icon">👋</div>
+          <h2 class="step-title">퇴실이 완료되었습니다</h2>
+          <p class="step-desc" id="exit-done-msg"></p>
+          <p class="countdown"><span id="exit-count">5</span>초 후 처음 화면으로 돌아갑니다.</p>
+          <button class="btn primary" data-go="home">처음으로</button>
+        </div>
+      </section>
+    </div>
+    <p class="demo-note">💡 아무것도 누르지 않고 60초가 지나면 자동으로 처음 화면으로 돌아갑니다.<br>
+      데모용 퇴실 번호: 010-1234-5678 (2번 좌석)</p>
+  </div>
+
+  <!-- ===================== 관리자 화면 ===================== -->
+  <div class="view hidden" id="view-admin">
+    <div class="admin">
+      <h1 class="admin-title">매장 관리자 대시보드</h1>
+      <section class="stat-grid" id="admin-stats"></section>
+
+      <section class="panel">
+        <h2>실시간 좌석 현황</h2>
+        <p class="panel-desc">사용 중인 좌석에는 남은 이용 시간이 표시되고, 30분 이하로 남은 좌석은 주황색으로 표시됩니다.</p>
+        <div id="admin-seat-map"></div>
+      </section>
+
+      <section class="panel">
+        <h2>오늘의 이용 기록</h2>
+        <div class="table-wrap">
+          <table class="log-table">
+            <thead>
+              <tr><th>시간</th><th>구분</th><th>휴대폰</th><th>좌석</th><th>이용권</th><th>결제 금액</th></tr>
+            </thead>
+            <tbody id="admin-log-body"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <footer class="footer">개인 학습용 포트폴리오 프로젝트 · 모든 데이터는 가상이며 실제 결제는 이루어지지 않습니다.</footer>
+
+  <script src="data.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
